@@ -1,28 +1,41 @@
 const fs = require('fs');
 const { program } = require('commander');
 
-// Використання commander для визначення параметрів командного рядка
 program
   .option('-i, --input <type>', 'input JSON file')
   .option('-o, --output <type>', 'output JSON file')
+  .option('-d, --display', 'display results')
   .parse(process.argv);
 
 const options = program.opts();
 
-// Читання вхідного файлу
-fs.readFile(options.input, 'utf8', (err, data) => {
-  if (err) {
-    console.error('Error reading the input file:', err);
-    return;
-  }
+if (!options.input) {
+  console.error("Please, specify input file");
+  process.exit(1);
+}
 
-  // Парсинг JSON даних
-  const jsonData = JSON.parse(data);
-  
-  // Об'єкт для збереження результатів
+let data;
+try {
+  data = fs.readFileSync(options.input, 'utf8');
+} catch (err) {
+  console.error("Cannot find input file");
+  process.exit(1);
+}
+
+const results = processResults(JSON.parse(data));
+
+if (options.display) {
+  console.log(results);
+}
+
+if (options.output) {
+  fs.writeFileSync(options.output, JSON.stringify(results, null, 2));
+  console.log(`Results saved to ${options.output}`);
+}
+
+function processResults(jsonData) {
   const results = {};
 
-  // Ітерація через масив об'єктів
   jsonData.forEach(item => {
     if (item.txt === "Доходи, усього") {
       results["Доходи, усього"] = item.value;
@@ -32,18 +45,6 @@ fs.readFile(options.input, 'utf8', (err, data) => {
     }
   });
 
-  // Виведення результатів
-  console.log(`Доходи, усього: ${results["Доходи, усього"] || 0}`);
-  console.log(`Витрати, усього: ${results["Витрати, усього"] || 0}`);
+  return results;
+}
 
-  // Запис результатів у файл
-  if (options.output) {
-    fs.writeFile(options.output, JSON.stringify(results, null, 2), 'utf8', (err) => {
-      if (err) {
-        console.error('Error writing to output file:', err);
-      } else {
-        console.log(`Results saved to ${options.output}`);
-      }
-    });
-  }
-});
